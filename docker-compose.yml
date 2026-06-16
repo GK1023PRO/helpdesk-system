@@ -7,8 +7,8 @@ services:
       - "5004:5000"
     environment:
       - DATABASE_URL=postgresql://admin:admin123@db:5432/helpdesk
-      - MAIL_USERNAME=georgeskhousa03@gmail.com
-      - MAIL_PASSWORD=kuyqnmakhtlhgxxj
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
     depends_on:
       - db
     volumes:
