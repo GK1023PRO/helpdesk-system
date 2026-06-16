@@ -41,6 +41,7 @@ MAIL_PASSWORD=your_gmail_app_password
 
 3. Start the app:
 docker-compose up --build
+**https://helpdesk-system-production-519c.up.railway.app**
 
 4. Visit: http://127.0.0.1:5004
 
