@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from datetime import datetime
 import os
 
@@ -13,6 +14,14 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'helpdesk_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://admin:admin123@localhost:5432/helpdesk')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+UPLOAD_FOLDER = '/app/static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -37,6 +46,7 @@ class Ticket(db.Model):
     description = db.Column(db.Text, nullable=False)
     priority = db.Column(db.String(20), default='Medium')
     status = db.Column(db.String(20), default='Open')
+    filename = db.Column(db.String(300), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -64,11 +74,29 @@ def load_user(user_id):
 @app.route('/')
 @login_required
 def index():
+    search = request.args.get('search', '')
+    status_filter = request.args.get('status', '')
+    priority_filter = request.args.get('priority', '')
+
     if current_user.role == 'admin':
-        tickets = Ticket.query.order_by(Ticket.created_at.desc()).all()
+        query = Ticket.query
     else:
-        tickets = Ticket.query.filter_by(user_id=current_user.id).order_by(Ticket.created_at.desc()).all()
-    return render_template('index.html', tickets=tickets)
+        query = Ticket.query.filter_by(user_id=current_user.id)
+
+    if search:
+        query = query.filter(Ticket.title.ilike(f'%{search}%'))
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    if priority_filter:
+        query = query.filter_by(priority=priority_filter)
+
+    tickets = query.order_by(Ticket.created_at.desc()).all()
+
+    return render_template('index.html',
+                           tickets=tickets,
+                           search=search,
+                           status_filter=status_filter,
+                           priority_filter=priority_filter)
 
 # -----------------------
 # Routes - Register
@@ -153,10 +181,18 @@ def create_ticket():
             flash('Title and description are required.', 'danger')
             return render_template('create_ticket.html')
 
+        filename = None
+        if 'file' in request.files:
+            file = request.files['file']
+            if file and file.filename != '' and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
         ticket = Ticket(
             title=title,
             description=description,
             priority=priority,
+            filename=filename,
             user_id=current_user.id
         )
         db.session.add(ticket)

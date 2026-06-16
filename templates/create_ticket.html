@@ -29,7 +29,7 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <div class="mb-3">
                     <label class="form-label">Title</label>
                     <input type="text" name="title" class="form-control"
@@ -47,6 +47,12 @@
                         <option value="Medium" selected>🟡 Medium</option>
                         <option value="High">🔴 High</option>
                     </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">📎 Attach File (optional)</label>
+                    <input type="file" name="file" class="form-control"
+                           accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx">
+                    <div class="form-text">Allowed: PNG, JPG, GIF, PDF, DOC, DOCX</div>
                 </div>
                 <button type="submit" class="btn btn-primary">Submit Ticket</button>
                 <a href="/" class="btn btn-secondary ms-2">Cancel</a>

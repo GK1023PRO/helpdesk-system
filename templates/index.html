@@ -38,6 +38,45 @@
         <a href="/ticket/create" class="btn btn-primary">+ New Ticket</a>
     </div>
 
+    <!-- Search and Filter -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="/">
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <input type="text" name="search" class="form-control"
+                               placeholder="🔍 Search by title..."
+                               value="{{ search }}">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="Open" {% if status_filter == 'Open' %}selected{% endif %}>🔵 Open</option>
+                            <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>🟡 In Progress</option>
+                            <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>⚫ Closed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="priority" class="form-select">
+                            <option value="">All Priorities</option>
+                            <option value="High" {% if priority_filter == 'High' %}selected{% endif %}>🔴 High</option>
+                            <option value="Medium" {% if priority_filter == 'Medium' %}selected{% endif %}>🟡 Medium</option>
+                            <option value="Low" {% if priority_filter == 'Low' %}selected{% endif %}>🟢 Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-primary w-100">Go</button>
+                    </div>
+                </div>
+                {% if search or status_filter or priority_filter %}
+                <div class="mt-2">
+                    <a href="/" class="btn btn-sm btn-outline-secondary">✖ Clear Filters</a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
     {% if tickets %}
     <table class="table table-bordered table-hover bg-white">
         <thead class="table-dark">
@@ -85,7 +124,13 @@
         </tbody>
     </table>
     {% else %}
-    <div class="alert alert-info">No tickets yet. <a href="/ticket/create">Create your first ticket</a>.</div>
+    <div class="alert alert-info">
+        {% if search or status_filter or priority_filter %}
+            No tickets found matching your filters. <a href="/">Clear filters</a>.
+        {% else %}
+            No tickets yet. <a href="/ticket/create">Create your first ticket</a>.
+        {% endif %}
+    </div>
     {% endif %}
 
 </div>
