@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from flask_mail import Mail, Message
 from datetime import datetime
 import os
 
@@ -23,6 +24,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# -----------------------
+# Mail Configuration
+# -----------------------
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
+
+mail = Mail(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -47,6 +59,7 @@ class Ticket(db.Model):
     priority = db.Column(db.String(20), default='Medium')
     status = db.Column(db.String(20), default='Open')
     filename = db.Column(db.String(300), nullable=True)
+    receiver_email = db.Column(db.String(120), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -176,6 +189,7 @@ def create_ticket():
         title = request.form['title'].strip()
         description = request.form['description'].strip()
         priority = request.form['priority']
+        receiver_email = request.form.get('receiver_email', '').strip()
 
         if not title or not description:
             flash('Title and description are required.', 'danger')
@@ -193,10 +207,41 @@ def create_ticket():
             description=description,
             priority=priority,
             filename=filename,
+            receiver_email=receiver_email,
             user_id=current_user.id
         )
         db.session.add(ticket)
         db.session.commit()
+
+        # Send email notification
+        try:
+            recipients = [current_user.email]
+            if receiver_email:
+                recipients.append(receiver_email)
+
+            msg = Message(
+                subject=f'Ticket #{ticket.id} Created: {ticket.title}',
+                recipients=recipients,
+                body=f'''Hello,
+
+A new ticket has been created.
+
+Ticket ID: #{ticket.id}
+Title: {ticket.title}
+Priority: {ticket.priority}
+Status: {ticket.status}
+Created by: {current_user.username}
+
+View ticket at: http://127.0.0.1:5004/ticket/{ticket.id}
+
+Help Desk System
+'''
+            )
+            mail.send(msg)
+        except Exception as e:
+            import traceback
+            print(f'Email error: {e}')
+            traceback.print_exc()
 
         flash('Ticket created successfully!', 'success')
         return redirect(url_for('index'))
@@ -242,6 +287,32 @@ def edit_ticket(id):
         ticket.status = status
         ticket.updated_at = datetime.utcnow()
         db.session.commit()
+
+        # Send email notification on update
+        try:
+            recipients = [ticket.owner.email]
+            if ticket.receiver_email:
+                recipients.append(ticket.receiver_email)
+
+            msg = Message(
+                subject=f'Ticket #{ticket.id} Updated: {ticket.title}',
+                recipients=recipients,
+                body=f'''Hello,
+
+Ticket #{ticket.id} has been updated.
+
+Title: {ticket.title}
+Priority: {ticket.priority}
+Status: {ticket.status}
+
+View ticket at: http://127.0.0.1:5004/ticket/{ticket.id}
+
+Help Desk System
+'''
+            )
+            mail.send(msg)
+        except Exception as e:
+            print(f'Email error: {e}')
 
         flash('Ticket updated successfully!', 'success')
         return redirect(url_for('view_ticket', id=ticket.id))
