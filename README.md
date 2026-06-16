@@ -11,6 +11,9 @@ A full-stack Help Desk Ticketing System built with Python, Flask, PostgreSQL, an
 - 🔄 Ticket status workflow (Open → In Progress → Closed)
 - 👑 Admin dashboard with statistics
 - 🔒 Role-based access control (Admin vs User)
+- 🔍 Search and filter tickets by title, status, priority
+- 📎 File attachments (PNG, JPG, PDF, DOC, DOCX)
+- 📧 Real email notifications via Gmail SMTP
 - 🐳 Docker Compose deployment
 
 ## Tech Stack
@@ -20,6 +23,7 @@ A full-stack Help Desk Ticketing System built with Python, Flask, PostgreSQL, an
 - PostgreSQL
 - SQLAlchemy
 - Flask-Login
+- Flask-Mail
 - Bootstrap 5
 - Docker Compose
 
@@ -30,46 +34,30 @@ git clone https://github.com/GK1023PRO/helpdesk-system.git
 
 cd helpdesk-system
 
-2. Start the app:
+2. Create a `.env` file:
+MAIL_USERNAME=your_gmail@gmail.com
+
+MAIL_PASSWORD=your_gmail_app_password
+
+3. Start the app:
 docker-compose up --build
 
-3. Visit: http://127.0.0.1:5001
+4. Visit: http://127.0.0.1:5004
 
-4. Register an account and make it admin:
+5. Register an account and make it admin:
 docker exec -it helpdesk-system-db-1 psql -U admin -d helpdesk
 
 UPDATE users SET role='admin' WHERE username='your_username';
 
 \q
 
-## Project Structure
-helpdesk-system/
+## Environment Variables
 
-├── app.py
-
-├── requirements.txt
-
-├── Dockerfile
-
-├── docker-compose.yml
-
-├── README.md
-
-└── templates/
-
-├── login.html
-
-├── register.html
-
-├── index.html
-
-├── create_ticket.html
-
-├── view_ticket.html
-
-├── edit_ticket.html
-
-└── dashboard.html
+| Variable | Description |
+|----------|-------------|
+| DATABASE_URL | PostgreSQL connection string |
+| MAIL_USERNAME | Gmail address for sending emails |
+| MAIL_PASSWORD | Gmail App Password (16 characters) |
 
 ## Database Design
 
@@ -90,6 +78,8 @@ helpdesk-system/
 | description | Text |
 | priority | String (Low/Medium/High) |
 | status | String (Open/In Progress/Closed) |
+| filename | String (attachment) |
+| receiver_email | String (notification recipient) |
 | created_at | DateTime |
 | user_id | ForeignKey |
 
@@ -107,3 +97,5 @@ helpdesk-system/
 - Admin dashboard shows total, open, in progress, and closed ticket counts
 - Only admins can see all tickets; users only see their own
 - Passwords are securely hashed using Werkzeug
+- Email notifications sent on ticket creation and updates
+- Credentials stored securely in .env file
